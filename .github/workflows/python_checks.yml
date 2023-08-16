@@ -2,6 +2,10 @@ name: Python Checks
 
 on:
   workflow_call:
+    inputs:
+      black_folder:
+        required: true
+        type: string
 
 jobs:
   check:
@@ -40,7 +44,7 @@ jobs:
         run: poetry install --no-interaction --no-root --with=dev
 
       - name: Check syntax
-        run: poetry run black src --check
+        run: poetry run black ${{inputs.black_folder}} --check
 
       - name: Check typing
         run : poetry run mypy
