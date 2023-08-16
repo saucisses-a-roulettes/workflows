@@ -6,13 +6,19 @@ on:
       black_folder:
         required: true
         type: string
-
+    secrets:
+      ssh_private_key:
+        required: true
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.ssh_private_key }}
 
       - name: Set up python
         id: setup-python
