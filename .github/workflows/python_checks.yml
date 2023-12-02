@@ -57,11 +57,5 @@ jobs:
         run: |
           $POETRY_HOME/bin/poetry install --no-interaction --no-root --with=dev
 
-      - name: Check syntax
-        run: $POETRY_HOME/bin/poetry run black ${{ inputs.black_folder }} --check
-
-      - name: Check typing
-        run : $POETRY_HOME/bin/poetry run pyright
-
-      - name: Run tests
-        run: $POETRY_HOME/bin/poetry run `pytest
+      - name: Pre-commit Checks
+        run: $POETRY_HOME/bin/poetry run pre-commit run --all-files
