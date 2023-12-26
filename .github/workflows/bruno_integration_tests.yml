@@ -1,0 +1,76 @@
+name: Bruno Integration Tests
+
+on:
+  workflow_call:
+    inputs:
+      wait_for_server_python_script_path:
+        description: path of the python script that will be run to wait for the server running on the docker compose to be up
+        required: true
+        type: string
+    secrets:
+      ssh_private_key:
+        required: true
+
+env:
+  POETRY_HOME: /opt/poetry
+jobs:
+  integration_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: $POETRY_HOME
+          key: check-poetry
+
+      - name: Install and configure Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        run: |
+          python3 -m venv $POETRY_HOME
+          $POETRY_HOME/bin/pip install poetry
+          $POETRY_HOME/bin/poetry --version
+
+      - name: Load cached venv
+        id: cached-venv
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
+
+      - name: Install dependencies
+        if: steps.cached-venv.outputs.cache-hit != 'true'
+        run: |
+          $POETRY_HOME/bin/poetry install --no-interaction --no-root --only=integration
+
+      - name: Set up Docker Compose
+        uses: KengoTODA/actions-setup-docker-compose@v1
+        with:
+          version: '2.14.2'
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.ssh_private_key }}
+
+      - name: Docker Compose Up
+        uses: isbang/compose-action@v1.5.1
+
+      - name: Wait for Compose to Be Up
+        run: $POETRY_HOME/bin/poetry run python ${{ inputs.wait_for_server_python_script_path }}
+
+      - name: Install NPM CLI package
+        run: npm install -g @usebruno/cli
+
+      - name: Run Bruno Tests
+        run: cd test/integration/keskireste-account-bruno && bru run account/ --env local
