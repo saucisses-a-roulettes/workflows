@@ -7,9 +7,21 @@ on:
         description: path of the python script that will be run to wait for the server running on the docker compose to be up
         required: true
         type: string
+      bruno_collection_path:
+        description: path of the bruno collection
+        required: true
+        type: string
+      scaleway_default_region:
+        description: default region for scaleway
+        required: true
+        type: string
     secrets:
       ssh_private_key:
         required: true
+      scaleway_secret_key:
+          required: false
+      scaleway_access_key:
+          required: false
 
 env:
   POETRY_HOME: /opt/poetry
@@ -65,6 +77,10 @@ jobs:
 
       - name: Docker Compose Up
         uses: isbang/compose-action@v1.5.1
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.scaleway_access_key }}
+          SCW_SECRET_KEY: ${{ secrets.scaleway_secret_key }}
+          SCW_DEFAULT_REGION: ${{ inputs.scaleway_default_region }}
 
       - name: Wait for Compose to Be Up
         run: $POETRY_HOME/bin/poetry run python ${{ inputs.wait_for_server_python_script_path }}
@@ -73,4 +89,4 @@ jobs:
         run: npm install -g @usebruno/cli
 
       - name: Run Bruno Tests
-        run: cd test/integration/keskireste-account-bruno && bru run account/ --env local
+        run: cd  ${{ inputs.bruno_collection_path }} && bru run account/ --env local
