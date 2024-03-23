@@ -1,7 +1,19 @@
-name: Python Checks
+name: Pre-commit Checks
 
 on:
   workflow_call:
+    inputs:
+      npm_install:
+        description: whether pre-commits need npm packages to be installed or not
+        default: false
+        type: boolean
+      poetry_install:
+        description: whether pre-commits need poetry packages to be installed or not
+        default: false
+        type: boolean
+      pre_commit_version:
+        description: pre-commit version to be installed
+        type: string
     secrets:
       ssh_private_key:
         required: true
@@ -16,17 +28,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
 
-      - uses: webfactory/ssh-agent@v0.8.0
+      - uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.ssh_private_key }}
 
       - name: Set up python
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      - name: Install Pre-commit
+        run: python -m pip install "pre-commit${{ inputs.pre_commit_version }}"
+
+      - name: Install Npm packages
+        if: inputs.npm_install == true
+        run: npm install --save-dev
+
       - name: Load cached Poetry installation
+        if: inputs.poetry_install == true
         id: cached-poetry
         uses: actions/cache@v3
         with:
@@ -34,13 +54,14 @@ jobs:
           key: check-poetry
 
       - name: Install and configure Poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        if: steps.cached-poetry.outputs.cache-hit != 'true' && inputs.poetry_install == true
         run: |
           python3 -m venv $POETRY_HOME
           $POETRY_HOME/bin/pip install poetry
           $POETRY_HOME/bin/poetry --version
 
       - name: Load cached venv
+        if: inputs.poetry_install == true
         id: cached-venv
         uses: actions/cache@v3
         with:
@@ -49,9 +70,9 @@ jobs:
           restore-keys: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install dependencies
-        if: steps.cached-venv.outputs.cache-hit != 'true'
+        if: steps.cached-venv.outputs.cache-hit != 'true' && inputs.poetry_install == true
         run: |
           $POETRY_HOME/bin/poetry install --no-interaction --no-root --with=dev
 
       - name: Pre-commit Checks
-        run: $POETRY_HOME/bin/poetry run pre-commit run --all-files
+        run: pre-commit run --all-files
