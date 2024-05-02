@@ -54,7 +54,7 @@ jobs:
           key: check-poetry
 
       - name: Install and configure Poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true' && inputs.poetry_install == true
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
         run: |
           python3 -m venv $POETRY_HOME
           $POETRY_HOME/bin/pip install poetry
@@ -75,4 +75,4 @@ jobs:
           $POETRY_HOME/bin/poetry install --no-interaction --no-root --with=dev
 
       - name: Pre-commit Checks
-        run: pre-commit run --all-files
+        run: $POETRY_HOME/bin/poetry run pre-commit run --all-files
